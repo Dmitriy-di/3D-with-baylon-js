@@ -1,5 +1,31 @@
 <template>
   <div>
+    <q-btn-group>
+      <q-btn
+        color="secondary"
+        @click="toggleGizmo('positionGizmoEnabled')"
+        glossy
+        label="First"
+      />
+      <q-btn
+        color="secondary"
+        @click="toggleGizmo('rotationGizmoEnabled')"
+        glossy
+        label="Second"
+      />
+      <q-btn
+        color="secondary"
+        @click="toggleGizmo('scaleGizmoEnabled')"
+        glossy
+        label="Third"
+      />
+      <q-btn
+        color="secondary"
+        @click="toggleGizmo('boundingBoxGizmoEnabled')"
+        glossy
+        label="Fourth"
+      />
+    </q-btn-group>
     <canvas ref="renderCanvas" id="renderCanvas" touch-action="none"></canvas>
   </div>
 </template>
@@ -12,17 +38,30 @@ import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { CreateGround } from "@babylonjs/core/Meshes/Builders/groundBuilder";
 import { CreateSphere } from "@babylonjs/core/Meshes/Builders/sphereBuilder";
 import { Scene } from "@babylonjs/core/scene";
-
 import { GridMaterial } from "@babylonjs/materials/grid/gridMaterial";
-import { ref, onMounted } from "vue";
+import { ref, onMounted, nextTick, watch } from "vue";
 
+import * as BABYLON from "@babylonjs/core/Legacy/legacy";
 const { pages } = defineProps({
   pages: Array,
 });
 
 const renderCanvas = ref(null);
+
+const gizmoManager = ref(null);
+
+const currentGizmoAction = ref("boundingBoxGizmoEnabled");
+const toggleGizmo = (giz) => {
+  console.log(currentGizmoAction.value);
+  if (gizmoManager.value) {
+    gizmoManager.value[currentGizmoAction.value] = false;
+    gizmoManager.value[giz] = !gizmoManager.value[giz];
+  }
+  currentGizmoAction.value = giz;
+};
 onMounted(() => {
   // Get the canvas element from the DOM.
+
   const canvas = renderCanvas.value;
 
   // Associate a Babylon Engine to it.
@@ -31,42 +70,58 @@ onMounted(() => {
   // Create our first scene.
   var scene = new Scene(engine);
 
-  // This creates and positions a free camera (non-mesh)
-  var camera = new FreeCamera("camera1", new Vector3(0, 5, -10), scene);
-
-  // This targets the camera to scene origin
-  camera.setTarget(Vector3.Zero());
-
-  // This attaches the camera to the canvas
-  camera.attachControl(canvas, true);
-
-  // This creates a light, aiming 0,1,0 - to the sky (non-mesh)
-  var light = new HemisphericLight("light1", new Vector3(0, 1, 0), scene);
-
-  // Default intensity is 1. Let's dim the light a small amount
-  light.intensity = 0.7;
-
-  // Create a grid material
-  var material = new GridMaterial("grid", scene);
-
-  // Our built-in 'sphere' shape.
-  var sphere = CreateSphere("sphere1", { segments: 16, diameter: 2 }, scene);
-
-  // Move the sphere upward 1/2 its height
-  sphere.position.y = 2;
-
-  // Affect a material
-  sphere.material = material;
-
-  // Our built-in 'ground' shape.
-  var ground = CreateGround(
-    "ground1",
-    { width: 6, height: 6, subdivisions: 2 },
+  var camera = new BABYLON.FreeCamera(
+    "camera1",
+    new BABYLON.Vector3(0, 0, 0),
     scene
   );
+  var light = new BABYLON.DirectionalLight(
+    "light",
+    new BABYLON.Vector3(0, -0.5, 1.0),
+    scene
+  );
+  light.position = new BABYLON.Vector3(0, 5, -2);
 
-  // Affect a material
-  ground.material = material;
+  // Create simple meshes
+  var spheres = [];
+  for (var i = 0; i < 5; i++) {
+    var sphere = BABYLON.Mesh.CreateIcoSphere(
+      "sphere",
+      { radius: 0.2, flat: true, subdivisions: 10 },
+      scene
+    );
+    sphere.scaling.x = 2;
+    sphere.position.y = 1;
+    sphere.material = new BABYLON.StandardMaterial("sphere material", scene);
+    sphere.position.z = i + 5;
+    spheres.push(sphere);
+  }
+
+  // Initialize GizmoManager
+  gizmoManager.value = new BABYLON.GizmoManager(scene);
+  gizmoManager.value.boundingBoxGizmoEnabled = true;
+  // Restrict gizmos to only spheres
+  gizmoManager.value.attachableMeshes = spheres;
+  // Toggle gizmos with keyboard buttons
+
+  document.onkeydown = (e) => {
+    if (e.key == "w") {
+      gizmoManager.value.positionGizmoEnabled =
+        !gizmoManager.value.positionGizmoEnabled;
+    }
+    if (e.key == "e") {
+      gizmoManager.value.rotationGizmoEnabled =
+        !gizmoManager.value.rotationGizmoEnabled;
+    }
+    if (e.key == "r") {
+      gizmoManager.value.scaleGizmoEnabled =
+        !gizmoManager.value.scaleGizmoEnabled;
+    }
+    if (e.key == "q") {
+      gizmoManager.value.boundingBoxGizmoEnabled =
+        !gizmoManager.value.boundingBoxGizmoEnabled;
+    }
+  };
 
   // Render every frame
   engine.runRenderLoop(() => {
