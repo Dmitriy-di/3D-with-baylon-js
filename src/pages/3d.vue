@@ -52,7 +52,6 @@ const gizmoManager = ref(null);
 
 const currentGizmoAction = ref("boundingBoxGizmoEnabled");
 const toggleGizmo = (giz) => {
-  console.log(currentGizmoAction.value);
   if (gizmoManager.value) {
     gizmoManager.value[currentGizmoAction.value] = false;
     gizmoManager.value[giz] = !gizmoManager.value[giz];
@@ -70,11 +69,20 @@ onMounted(() => {
   // Create our first scene.
   var scene = new Scene(engine);
 
+  // var camera = new BABYLON.FreeCamera(
+  //   "camera1",
+  //   new BABYLON.Vector3(0, 0, 0),
+  //   scene
+  // );
+
   var camera = new BABYLON.FreeCamera(
     "camera1",
-    new BABYLON.Vector3(0, 0, 0),
+    new BABYLON.Vector3(0, 5, -5),
     scene
   );
+  camera.setTarget(BABYLON.Vector3.Zero());
+  camera.attachControl(canvas, true);
+
   var light = new BABYLON.DirectionalLight(
     "light",
     new BABYLON.Vector3(0, -0.5, 1.0),
@@ -85,29 +93,27 @@ onMounted(() => {
   // Create simple meshes
   var spheres = [];
   for (var i = 0; i < 5; i++) {
-    var sphere = BABYLON.Mesh.CreateIcoSphere(
-      "sphere",
-      { radius: 0.2, flat: true, subdivisions: 10 },
-      scene
-    );
-    sphere.scaling.x = 2;
-    sphere.position.y = 1;
+    // var sphere = BABYLON.Mesh.CreateIcoSphere(
+    //   "sphere",
+    //   { radius: 0.2, flat: true, subdivisions: 10 },
+    //   scene
+    // );
+    var sphere = BABYLON.Mesh.CreateSphere("sphere1", 16, 2, scene);
     sphere.material = new BABYLON.StandardMaterial("sphere material", scene);
-    sphere.position.z = i + 5;
+    sphere.position.z = i;
     spheres.push(sphere);
   }
-
   // Initialize GizmoManager
   gizmoManager.value = new BABYLON.GizmoManager(scene);
   gizmoManager.value.boundingBoxGizmoEnabled = true;
   // Restrict gizmos to only spheres
   gizmoManager.value.attachableMeshes = spheres;
   // Toggle gizmos with keyboard buttons
-
   document.onkeydown = (e) => {
     if (e.key == "w") {
       gizmoManager.value.positionGizmoEnabled =
         !gizmoManager.value.positionGizmoEnabled;
+      console.log(gizmoManager.value.gizmos.positionGizmo);
     }
     if (e.key == "e") {
       gizmoManager.value.rotationGizmoEnabled =
@@ -122,6 +128,18 @@ onMounted(() => {
         !gizmoManager.value.boundingBoxGizmoEnabled;
     }
   };
+
+  var ground = BABYLON.MeshBuilder.CreateGround(
+    "ground1",
+    {
+      width: 12,
+      height: 12,
+      subdivisions: 2,
+    },
+    scene
+  );
+  ground.position.y = -1;
+  scene.createDefaultXRExperienceAsync({ floorMeshes: [ground] });
 
   // Render every frame
   engine.runRenderLoop(() => {
