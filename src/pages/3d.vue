@@ -2,49 +2,47 @@
   <div>
     <q-btn-group>
       <q-btn
-        color="secondary"
-        @click="toggleGizmo('positionGizmoEnabled')"
+        :class="btnsToggleBool[0] ? 'pressed_btn' : ''"
+        @click="toggleGizmo(0, 'positionGizmoEnabled')"
         glossy
-        label="First"
+        label="Смещение"
       />
+
       <q-btn
-        color="secondary"
-        @click="toggleGizmo('rotationGizmoEnabled')"
+        :class="btnsToggleBool[1] ? 'pressed_btn' : ''"
+        @click="toggleGizmo(1, 'rotationGizmoEnabled')"
         glossy
-        label="Second"
+        label="Вращение"
       />
+
       <q-btn
-        color="secondary"
-        @click="toggleGizmo('scaleGizmoEnabled')"
+        :class="btnsToggleBool[2] ? 'pressed_btn' : ''"
+        @click="toggleGizmo(2, 'scaleGizmoEnabled')"
         glossy
-        label="Third"
+        label="Масштабирование"
       />
+
       <q-btn
-        color="secondary"
-        @click="toggleGizmo('boundingBoxGizmoEnabled')"
+        :class="btnsToggleBool[3] ? 'pressed_btn' : ''"
+        @click="toggleGizmo(3, 'boundingBoxGizmoEnabled')"
         glossy
-        label="Fourth"
+        label="Курсор"
       />
     </q-btn-group>
+
     <canvas ref="renderCanvas" id="renderCanvas" touch-action="none"></canvas>
   </div>
 </template>
 
 <script setup>
-import { FreeCamera } from "@babylonjs/core/Cameras/freeCamera";
-import { Engine } from "@babylonjs/core/Engines/engine";
-import { HemisphericLight } from "@babylonjs/core/Lights/hemisphericLight";
-import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { CreateGround } from "@babylonjs/core/Meshes/Builders/groundBuilder";
-import { CreateSphere } from "@babylonjs/core/Meshes/Builders/sphereBuilder";
-import { Scene } from "@babylonjs/core/scene";
-import { GridMaterial } from "@babylonjs/materials/grid/gridMaterial";
 import { ref, onMounted, nextTick, watch } from "vue";
 
 import * as BABYLON from "@babylonjs/core/Legacy/legacy";
 const { pages } = defineProps({
   pages: Array,
 });
+
+let btnsToggleBool = ref([1, 0, 0, 0]);
 
 const renderCanvas = ref(null);
 
@@ -53,7 +51,10 @@ const gizmoManager = ref(null);
 const selectedSphereRef = ref(null);
 
 const currentGizmoAction = ref("boundingBoxGizmoEnabled");
-const toggleGizmo = (giz) => {
+
+const toggleGizmo = (ind, giz) => {
+  btnsToggleBool.value = [0, 0, 0, 0];
+  btnsToggleBool.value[ind] = 1;
   if (gizmoManager.value) {
     gizmoManager.value[currentGizmoAction.value] = false;
     gizmoManager.value[giz] = !gizmoManager.value[giz];
@@ -66,24 +67,24 @@ onMounted(() => {
   const canvas = renderCanvas.value;
 
   // Associate a Babylon Engine to it.
-  const engine = new Engine(canvas);
+  const engine = new BABYLON.Engine(canvas);
 
   // Create our first scene.
-  var scene = new Scene(engine);
+  var scene = new BABYLON.Scene(engine);
 
-  var camera = new BABYLON.FreeCamera(
-    "camera1",
-    new BABYLON.Vector3(10, 10, 10),
-    scene
-  );
-  camera.setTarget(BABYLON.Vector3.Zero());
   // var camera = new BABYLON.FreeCamera(
   //   "camera1",
-  //   new BABYLON.Vector3(0, 5, -5),
+  //   new BABYLON.Vector3(10, 10, 10),
   //   scene
   // );
   // camera.setTarget(BABYLON.Vector3.Zero());
-  // camera.attachControl(canvas, true);
+  var camera = new BABYLON.FreeCamera(
+    "camera1",
+    new BABYLON.Vector3(0, 5, -5),
+    scene
+  );
+  camera.setTarget(BABYLON.Vector3.Zero());
+  camera.attachControl(canvas, true);
 
   // const camera = new BABYLON.ArcRotateCamera(
   //   "camera-1",
@@ -114,43 +115,8 @@ onMounted(() => {
     sphere.actionManager = new BABYLON.ActionManager(scene);
     sphere.material.diffuseColor = BABYLON.Color3.Blue();
     sphere.uniqField = "uniq";
-    // sphere.actionManager.registerAction(
-    //   new BABYLON.SetValueAction(
-    //     {
-    //       trigger: BABYLON.ActionManager.OnLeftPickTrigger,
-    //     },
-    //     sphere,
-    //     "scaling",
-    //     new BABYLON.Vector3(1.2, 1.2, 1.2)
-    //   )
-    // );
 
-    // sphere.actionManager.registerAction(
-    //   new BABYLON.ExecuteCodeAction(
-    //     BABYLON.ActionManager.OnPickUpTrigger,
-    //     function (evt) {
-    //       evt.source.scaling = new BABYLON.Vector3(1, 1, 1);
-    //     }
-    //   )
-    // );
-
-    //     sphere.actionManager.registerAction(
-    //   new BABYLON.ExecuteCodeAction(
-    //     BABYLON.ActionManager.OnPointerOverTrigger,
-    //     function (evt) {
-    //       evt.source.scaling = new BABYLON.Vector3(1.2, 1.2, 1.2);
-    //     }
-    //   )
-    // );
-
-    // sphere.actionManager.registerAction(
-    //   new BABYLON.ExecuteCodeAction(
-    //     BABYLON.ActionManager.OnPointerOutTrigger,
-    //     function (evt) {
-    //       evt.source.scaling = new BABYLON.Vector3(1, 1, 1);
-    //     }
-    //   )
-    // );
+    gizmoManager.value.positionGizmoEnabled = true;
   }
 
   var selected = null;
@@ -159,7 +125,6 @@ onMounted(() => {
       selected.material.diffuseColor = BABYLON.Color3.Blue();
       selected = null;
     }
-    console.log(evt.pickInfo.pickedMesh?.uniqField);
     if (
       evt.pickInfo.hit &&
       evt.pickInfo.pickedMesh &&
@@ -173,29 +138,8 @@ onMounted(() => {
 
   // Initialize GizmoManager
   gizmoManager.value = new BABYLON.GizmoManager(scene);
-  // gizmoManager.value.boundingBoxGizmoEnabled = true;
   // Restrict gizmos to only spheres
   gizmoManager.value.attachableMeshes = spheres;
-  // Toggle gizmos with keyboard buttons
-  document.onkeydown = (e) => {
-    if (e.key == "w") {
-      gizmoManager.value.positionGizmoEnabled =
-        !gizmoManager.value.positionGizmoEnabled;
-      console.log(gizmoManager.value.gizmos.positionGizmo);
-    }
-    if (e.key == "e") {
-      gizmoManager.value.rotationGizmoEnabled =
-        !gizmoManager.value.rotationGizmoEnabled;
-    }
-    if (e.key == "r") {
-      gizmoManager.value.scaleGizmoEnabled =
-        !gizmoManager.value.scaleGizmoEnabled;
-    }
-    if (e.key == "q") {
-      gizmoManager.value.boundingBoxGizmoEnabled =
-        !gizmoManager.value.boundingBoxGizmoEnabled;
-    }
-  };
 
   var ground = BABYLON.MeshBuilder.CreateGround(
     "ground1",
@@ -225,7 +169,11 @@ body {
   margin: 0;
   overflow: hidden;
 }
-
+.pressed_btn {
+  background-color: rgb(255, 209, 6);
+  box-shadow: inset 0px 0px 5px rgba(0, 0, 0, 0.2);
+  transform: translateY(2px);
+}
 #renderCanvas {
   width: 100%;
   height: 100%;
