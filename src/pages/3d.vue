@@ -62,6 +62,10 @@ const currentGizmoAction = ref("positionGizmoEnabled");
 const toggleGizmo = (ind, giz) => {
   btnsToggleBool.value = [false, false, false, false, false];
   btnsToggleBool.value[ind] = true;
+  if (ind == 4) {
+    toggleGizmoManager([false, false, false, false, false]);
+    return;
+  }
   if (gizmoManager.value) {
     gizmoManager.value[currentGizmoAction.value] = false;
     gizmoManager.value[giz] = !gizmoManager.value[giz];
@@ -76,14 +80,10 @@ const toggleGizmoManager = function (arrValues) {
   gizmoManager.value.boundingBoxGizmoEnabled = arrValues[3];
 };
 onMounted(() => {
-  // Get the canvas element from the DOM.
-
   const canvas = renderCanvas.value;
 
-  // Associate a Babylon Engine to it.
   const engine = new BABYLON.Engine(canvas);
 
-  // Create our first scene.
   let scene = new BABYLON.Scene(engine);
 
   let camera = new BABYLON.FreeCamera(
@@ -101,7 +101,6 @@ onMounted(() => {
   );
   light.position = new BABYLON.Vector3(0, 5, -2);
 
-  // Create simple meshes
   let spheres = [];
 
   for (let i = 0; i < 5; i++) {
@@ -120,6 +119,7 @@ onMounted(() => {
       selected.material.diffuseColor = BABYLON.Color3.Blue();
       selected = null;
     }
+
     if (
       evt.pickInfo.hit &&
       evt.pickInfo.pickedMesh &&
@@ -130,16 +130,15 @@ onMounted(() => {
       evt.pickInfo.pickedMesh.material.diffuseColor = BABYLON.Color3.Green();
       toggleGizmoManager(btnsToggleBool.value);
     }
+
     if (!evt.pickInfo.pickedMesh?.uniqField) {
       toggleGizmoManager([false, false, false, false]);
     }
   }, BABYLON.PointerEventTypes.POINTERUP);
 
-  // Initialize GizmoManager
   gizmoManager.value = new BABYLON.GizmoManager(scene);
   gizmoManager.value.positionGizmoEnabled = true;
 
-  // Restrict gizmos to only spheres
   gizmoManager.value.attachableMeshes = spheres;
 
   let ground = BABYLON.MeshBuilder.CreateGround(
@@ -154,7 +153,6 @@ onMounted(() => {
   ground.position.y = -1;
   scene.createDefaultXRExperienceAsync({ floorMeshes: [ground] });
 
-  // Render every frame
   engine.runRenderLoop(() => {
     scene.render();
   });
