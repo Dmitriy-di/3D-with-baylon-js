@@ -50,6 +50,8 @@ const renderCanvas = ref(null);
 
 const gizmoManager = ref(null);
 
+const selectedSphereRef = ref(null);
+
 const currentGizmoAction = ref("boundingBoxGizmoEnabled");
 const toggleGizmo = (giz) => {
   if (gizmoManager.value) {
@@ -69,19 +71,30 @@ onMounted(() => {
   // Create our first scene.
   var scene = new Scene(engine);
 
-  // var camera = new BABYLON.FreeCamera(
-  //   "camera1",
-  //   new BABYLON.Vector3(0, 0, 0),
-  //   scene
-  // );
-
   var camera = new BABYLON.FreeCamera(
     "camera1",
-    new BABYLON.Vector3(0, 5, -5),
+    new BABYLON.Vector3(10, 10, 10),
     scene
   );
   camera.setTarget(BABYLON.Vector3.Zero());
-  camera.attachControl(canvas, true);
+  // var camera = new BABYLON.FreeCamera(
+  //   "camera1",
+  //   new BABYLON.Vector3(0, 5, -5),
+  //   scene
+  // );
+  // camera.setTarget(BABYLON.Vector3.Zero());
+  // camera.attachControl(canvas, true);
+
+  // const camera = new BABYLON.ArcRotateCamera(
+  //   "camera-1",
+  //   Math.PI - Math.PI / 4,
+  //   Math.PI / 3,
+  //   15,
+  //   new BABYLON.Vector3(0, 0, 0),
+  //   scene
+  // );
+  // camera.setTarget(new BABYLON.Vector3(0, 0, 0));
+  // camera.attachControl(canvas);
 
   var light = new BABYLON.DirectionalLight(
     "light",
@@ -92,20 +105,75 @@ onMounted(() => {
 
   // Create simple meshes
   var spheres = [];
+
   for (var i = 0; i < 5; i++) {
-    // var sphere = BABYLON.Mesh.CreateIcoSphere(
-    //   "sphere",
-    //   { radius: 0.2, flat: true, subdivisions: 10 },
-    //   scene
-    // );
-    var sphere = BABYLON.Mesh.CreateSphere("sphere1", 16, 2, scene);
+    var sphere = BABYLON.Mesh.CreateSphere(`sphere${i}`, 16, 2, scene);
     sphere.material = new BABYLON.StandardMaterial("sphere material", scene);
     sphere.position.z = i;
     spheres.push(sphere);
+    sphere.actionManager = new BABYLON.ActionManager(scene);
+    sphere.material.diffuseColor = BABYLON.Color3.Blue();
+    sphere.uniqField = "uniq";
+    // sphere.actionManager.registerAction(
+    //   new BABYLON.SetValueAction(
+    //     {
+    //       trigger: BABYLON.ActionManager.OnLeftPickTrigger,
+    //     },
+    //     sphere,
+    //     "scaling",
+    //     new BABYLON.Vector3(1.2, 1.2, 1.2)
+    //   )
+    // );
+
+    // sphere.actionManager.registerAction(
+    //   new BABYLON.ExecuteCodeAction(
+    //     BABYLON.ActionManager.OnPickUpTrigger,
+    //     function (evt) {
+    //       evt.source.scaling = new BABYLON.Vector3(1, 1, 1);
+    //     }
+    //   )
+    // );
+
+    //     sphere.actionManager.registerAction(
+    //   new BABYLON.ExecuteCodeAction(
+    //     BABYLON.ActionManager.OnPointerOverTrigger,
+    //     function (evt) {
+    //       evt.source.scaling = new BABYLON.Vector3(1.2, 1.2, 1.2);
+    //     }
+    //   )
+    // );
+
+    // sphere.actionManager.registerAction(
+    //   new BABYLON.ExecuteCodeAction(
+    //     BABYLON.ActionManager.OnPointerOutTrigger,
+    //     function (evt) {
+    //       evt.source.scaling = new BABYLON.Vector3(1, 1, 1);
+    //     }
+    //   )
+    // );
   }
+
+  var selected = null;
+  scene.onPointerObservable.add(function (evt) {
+    if (selected) {
+      selected.material.diffuseColor = BABYLON.Color3.Blue();
+      selected = null;
+    }
+    console.log(evt.pickInfo.pickedMesh?.uniqField);
+    if (
+      evt.pickInfo.hit &&
+      evt.pickInfo.pickedMesh &&
+      evt.event.button === 0 &&
+      evt.pickInfo.pickedMesh?.uniqField
+    ) {
+      selected = evt.pickInfo.pickedMesh;
+      evt.pickInfo.pickedMesh.material.diffuseColor = BABYLON.Color3.Green();
+    }
+  }, BABYLON.PointerEventTypes.POINTERUP);
+
   // Initialize GizmoManager
   gizmoManager.value = new BABYLON.GizmoManager(scene);
-  gizmoManager.value.boundingBoxGizmoEnabled = true;
+  // gizmoManager.value.boundingBoxGizmoEnabled = true;
   // Restrict gizmos to only spheres
   gizmoManager.value.attachableMeshes = spheres;
   // Toggle gizmos with keyboard buttons
