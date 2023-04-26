@@ -26,6 +26,13 @@
         :class="btnsToggleBool[3] ? 'pressed_btn' : ''"
         @click="toggleGizmo(3, 'boundingBoxGizmoEnabled')"
         glossy
+        label="Мульти"
+      />
+
+      <q-btn
+        :class="btnsToggleBool[4] ? 'pressed_btn' : ''"
+        @click="toggleGizmo(4)"
+        glossy
         label="Курсор"
       />
     </q-btn-group>
@@ -42,7 +49,7 @@ const { pages } = defineProps({
   pages: Array,
 });
 
-let btnsToggleBool = ref([1, 0, 0, 0]);
+let btnsToggleBool = ref([true, false, false, false, false]);
 
 const renderCanvas = ref(null);
 
@@ -50,16 +57,23 @@ const gizmoManager = ref(null);
 
 const selectedSphereRef = ref(null);
 
-const currentGizmoAction = ref("boundingBoxGizmoEnabled");
+const currentGizmoAction = ref("positionGizmoEnabled");
 
 const toggleGizmo = (ind, giz) => {
-  btnsToggleBool.value = [0, 0, 0, 0];
-  btnsToggleBool.value[ind] = 1;
+  btnsToggleBool.value = [false, false, false, false, false];
+  btnsToggleBool.value[ind] = true;
   if (gizmoManager.value) {
     gizmoManager.value[currentGizmoAction.value] = false;
     gizmoManager.value[giz] = !gizmoManager.value[giz];
   }
   currentGizmoAction.value = giz;
+};
+
+const toggleGizmoManager = function (arrValues) {
+  gizmoManager.value.positionGizmoEnabled = arrValues[0];
+  gizmoManager.value.rotationGizmoEnabled = arrValues[1];
+  gizmoManager.value.scaleGizmoEnabled = arrValues[2];
+  gizmoManager.value.boundingBoxGizmoEnabled = arrValues[3];
 };
 onMounted(() => {
   // Get the canvas element from the DOM.
@@ -70,15 +84,9 @@ onMounted(() => {
   const engine = new BABYLON.Engine(canvas);
 
   // Create our first scene.
-  var scene = new BABYLON.Scene(engine);
+  let scene = new BABYLON.Scene(engine);
 
-  // var camera = new BABYLON.FreeCamera(
-  //   "camera1",
-  //   new BABYLON.Vector3(10, 10, 10),
-  //   scene
-  // );
-  // camera.setTarget(BABYLON.Vector3.Zero());
-  var camera = new BABYLON.FreeCamera(
+  let camera = new BABYLON.FreeCamera(
     "camera1",
     new BABYLON.Vector3(0, 5, -5),
     scene
@@ -86,18 +94,7 @@ onMounted(() => {
   camera.setTarget(BABYLON.Vector3.Zero());
   camera.attachControl(canvas, true);
 
-  // const camera = new BABYLON.ArcRotateCamera(
-  //   "camera-1",
-  //   Math.PI - Math.PI / 4,
-  //   Math.PI / 3,
-  //   15,
-  //   new BABYLON.Vector3(0, 0, 0),
-  //   scene
-  // );
-  // camera.setTarget(new BABYLON.Vector3(0, 0, 0));
-  // camera.attachControl(canvas);
-
-  var light = new BABYLON.DirectionalLight(
+  let light = new BABYLON.DirectionalLight(
     "light",
     new BABYLON.Vector3(0, -0.5, 1.0),
     scene
@@ -105,21 +102,19 @@ onMounted(() => {
   light.position = new BABYLON.Vector3(0, 5, -2);
 
   // Create simple meshes
-  var spheres = [];
+  let spheres = [];
 
-  for (var i = 0; i < 5; i++) {
-    var sphere = BABYLON.Mesh.CreateSphere(`sphere${i}`, 16, 2, scene);
+  for (let i = 0; i < 5; i++) {
+    let sphere = BABYLON.Mesh.CreateSphere(`sphere${i}`, 16, 2, scene);
     sphere.material = new BABYLON.StandardMaterial("sphere material", scene);
     sphere.position.z = i;
     spheres.push(sphere);
     sphere.actionManager = new BABYLON.ActionManager(scene);
     sphere.material.diffuseColor = BABYLON.Color3.Blue();
     sphere.uniqField = "uniq";
-
-    gizmoManager.value.positionGizmoEnabled = true;
   }
 
-  var selected = null;
+  let selected = null;
   scene.onPointerObservable.add(function (evt) {
     if (selected) {
       selected.material.diffuseColor = BABYLON.Color3.Blue();
@@ -133,15 +128,21 @@ onMounted(() => {
     ) {
       selected = evt.pickInfo.pickedMesh;
       evt.pickInfo.pickedMesh.material.diffuseColor = BABYLON.Color3.Green();
+      toggleGizmoManager(btnsToggleBool.value);
+    }
+    if (!evt.pickInfo.pickedMesh?.uniqField) {
+      toggleGizmoManager([false, false, false, false]);
     }
   }, BABYLON.PointerEventTypes.POINTERUP);
 
   // Initialize GizmoManager
   gizmoManager.value = new BABYLON.GizmoManager(scene);
+  gizmoManager.value.positionGizmoEnabled = true;
+
   // Restrict gizmos to only spheres
   gizmoManager.value.attachableMeshes = spheres;
 
-  var ground = BABYLON.MeshBuilder.CreateGround(
+  let ground = BABYLON.MeshBuilder.CreateGround(
     "ground1",
     {
       width: 12,
